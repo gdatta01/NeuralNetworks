@@ -3,9 +3,10 @@ import matplotlib.pyplot as plt
 import math
 import gzip
 import time
-from math import sqrt
 import datetime
 import random
+from math import floor
+from math import sqrt
 
 def cost(a, y):
     return (a - y)**2
@@ -87,8 +88,23 @@ def shuffle(a, b):
     a, b = zip(*c)
     return a, b
 
+def get_time_based(d, lr0, r):
+    def time_based(lr, n):
+        return lr / (1 + d * n)
+    return time_based
+
+def get_step_based(d, lr0, r):
+    def step_based(lr, n):
+        return lr0 * d ** floor((1 + n) / r)
+    return step_based
+
+def get_exponential(d, lr0, r):
+    def exponential(lr, n):
+        return lr0 * exp(d * n)
+    return exponential
+
 class NeuralNet:
-    def __init__(self, layers, step = 0.1, alpha = 0.5, activation=sigmoid, da_dz=deriv_sigmoid, learning_rate_schedule = lambda x: x):
+    def __init__(self, layers, get_lrs = lambda d, s, r: lambda x, n: x, step = 0.1, alpha = 0.5, d = 0.5, r=10000, activation=sigmoid, da_dz=deriv_sigmoid):
         self.training_correct = 0
         self.training_atts = 0
         self.test_correct = 0
@@ -104,9 +120,9 @@ class NeuralNet:
         self.biases = [np.zeros((layers[i], 1)) for i in range(1, len(layers))]
         self.step = step
         self.alpha = alpha
-        self.learning_rate_schedule = learning_rate_schedule
+        self.lr_schedule = get_lrs(d, step, r)
         
-    def train(self, input_data, output_data, batch_size=100):
+    def train(self, input_data, output_data, batch_size):
         """should take in entire dataset to train, feedforward,
            then optimize for each training example"""
         """create sets of batch examples, feedforward and compute cost, then backprop"""
@@ -137,7 +153,7 @@ class NeuralNet:
             avg_cost = sum_cost / count
             cost_over_time.append(avg_cost)
 
-            delta = -1 * self.learning_rate_schedule(self.step) * avg_grad + self.alpha * delta
+            delta = -1 * self.lr_schedule(self.step, m) * avg_grad + self.alpha * delta
             
             self.weights += delta[0]
             self.biases += delta[1]
@@ -195,22 +211,16 @@ class NeuralNet:
         return np.array([grad_weights, grad_biases])
 
 
-def run_training(num=10000, batch=100, repeat = True, img_file='train-images-idx3-ubyte.gz', label_file='train-labels-idx1-ubyte.gz', size=28, choices=10):
+def run_training(num=60000, batch=100, repeat = 1, img_file='train-images-idx3-ubyte.gz', label_file='train-labels-idx1-ubyte.gz', size=28, choices=10):
+    repeat -= 1
     images = get_images(img_file, num, size)
     images = [vectorize_image(img) for img in images]
     labels = get_labels(label_file, num)
     output = convert_labels(labels, choices)
+    images, output = shuffle(images, output)
     nn.train(images, output, batch)
     if repeat:
-        batch *= 10
-        nn.step = 0.05
-        nn.alpha = 0.25
-        images, output = shuffle(images, output)
-        nn.train(images, output, batch)
-        nn.step = 0.01
-        nn.alpha = 0.1
-        images, output = shuffle(images, output)
-        nn.train(images, output, batch)
+        run_training(num, batch, repeat, img_file, label_file, size, choices)
 
 def run_testing():
     cur_correct = nn.test_correct
@@ -220,11 +230,12 @@ def run_testing():
         nn.test(img, actual)
     print(f'Accuracy: {((nn.test_correct - cur_correct) / (nn.test_atts - cur_atts) *100):.3f}%\n')
 
-nn = NeuralNet([784, 16, 16, 10])
+nn = NeuralNet([784, 16, 16, 10], get_step_based)
 test_images = get_images("t10k-images-idx3-ubyte.gz", 1000, 28)
 image_iter = iter(test_images)
 test_labels = get_labels("t10k-labels-idx1-ubyte.gz", 1000)
 label_iter = iter(convert_labels(test_labels, 10))
+
 def test_one():
     img = next(image_iter)
     picture = np.asarray(img).squeeze()
