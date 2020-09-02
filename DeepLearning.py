@@ -104,7 +104,7 @@ def get_exponential(d, lr0, r):
     return exponential
 
 class NeuralNet:
-    def __init__(self, layers, get_lrs = lambda d, s, r: lambda x, n: x, step = 0.1, alpha = 0.5, d = 0.5, r=10000, activation=sigmoid, da_dz=deriv_sigmoid):
+    def __init__(self, layers, get_lrs = lambda d, s, r: lambda x, n: x, step = 0.1, alpha = 0.1, d = 0.5, r=10000, activation=sigmoid, da_dz=deriv_sigmoid):
         self.training_correct = 0
         self.training_atts = 0
         self.test_correct = 0
@@ -116,8 +116,8 @@ class NeuralNet:
             self.z.append(np.zeros(layer).reshape((layer, 1)))
         self.activation = np.vectorize(activation)
         self.activation_deriv = da_dz
-        self.weights = [2 * np.random.rand(layers[i], layers[i - 1]) - 1 for i in range(1, len(layers))]
-        self.biases = [np.zeros((layers[i], 1)) for i in range(1, len(layers))]
+        self.weights = [0.5 * np.random.rand(layers[i], layers[i - 1]) - 0.25 for i in range(1, len(layers))]
+        self.biases = [0.5 * np.random.rand(layers[i], 1) - 0.25 for i in range(1, len(layers))]
         self.step = step
         self.alpha = alpha
         self.lr_schedule = get_lrs(d, step, r)
@@ -132,7 +132,7 @@ class NeuralNet:
         start_time = time.time()
         #dstep = 0.001665
         train_count = 0
-        delta = np.array([[np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))], [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]])
+        #delta = np.array([[np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))], [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]])
         while n <= len(input_data):
             batch_in = input_data[m:n]
             batch_out = output_data[m:n]
@@ -153,10 +153,10 @@ class NeuralNet:
             avg_cost = sum_cost / count
             cost_over_time.append(avg_cost)
 
-            delta = -1 * self.lr_schedule(self.step, m) * avg_grad + self.alpha * delta
+            #delta = -1 * self.lr_schedule(self.step, m) * avg_grad + self.alpha * delta
             
-            self.weights += delta[0]
-            self.biases += delta[1]
+            self.weights -= self.alpha * avg_grad[0]
+            self.biases -= self.alpha * avg_grad[1]
             
             m += batch_size
             n += batch_size
@@ -183,8 +183,8 @@ class NeuralNet:
         
     def feedforward(self, input):
         """computes output of network for given input"""
-        assert type(input) is np.ndarray
-        assert input.shape == self.neurons[0].shape
+        #assert type(input) is np.ndarray
+        #assert input.shape == self.neurons[0].shape
         self.neurons[0] = input
         for l in range(1, len(self.neurons)):
             self.z[l] = np.dot(self.weights[l - 1], self.neurons[l - 1]) + self.biases[l - 1]
@@ -192,29 +192,27 @@ class NeuralNet:
         return self.neurons[-1]
 
     def backprop(self, a, y):
-        grad_weights = [np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))]
-        grad_biases = [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]
-        dc_da = [np.zeros(self.neurons[i].shape) for i in range(0, len(self.neurons))]
+        self.grad_weights = [np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))]
+        self.grad_biases = [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]
+        self.dc_da = [np.zeros(self.neurons[i].shape) for i in range(0, len(self.neurons))]
+        for h in range(len(self.neurons[-1])):
+            self.dc_da[-1][h] = deriv_cost(a[h], y[h])
         l = len(self.neurons) - 1
-        for h in range(len(self.neurons[l])):
-            dc_da[l][h] = deriv_cost(a[h], y[h])
         while l > 0:
             for i in range(len(self.weights[l - 1])):
                 z_prime = self.activation_deriv(self.z[l][i])
                 if l < len(self.neurons) - 1:
-                    dc_da[l][i] = sum([self.weights[l][h, i] * self.activation_deriv(self.z[l][h]) * dc_da[l + 1][h] for h in range(len(self.neurons[l + 1]))])
-                dc_dali = dc_da[l][i]
+                    self.dc_da[l][i] = sum([self.weights[l][h, i] * self.activation_deriv(self.z[l][h]) * self.dc_da[l + 1][h] for h in range(len(self.neurons[l + 1]))])
                 for j in range(len(self.weights[l - 1][i])):
-                    grad_weights[l - 1][i, j] = self.neurons[l - 1][j] * z_prime * dc_dali
-                grad_biases[l - 1][i] = z_prime * dc_dali
+                    self.grad_weights[l - 1][i, j] = self.neurons[l - 1][j] * z_prime * self.dc_da[l][i]
+                self.grad_biases[l - 1][i] = z_prime * self.dc_da[l][i]
             l -= 1
-        return np.array([grad_weights, grad_biases])
+        return np.array([self.grad_weights, self.grad_biases])
 
 
-def run_training(num=60000, batch=100, repeat = 1, img_file='train-images-idx3-ubyte.gz', label_file='train-labels-idx1-ubyte.gz', size=28, choices=10):
+def run_training(num=50000, batch=100, repeat = 1, img_file='train-images-idx3-ubyte.gz', label_file='train-labels-idx1-ubyte.gz', size=28, choices=10):
     repeat -= 1
-    images = get_images(img_file, num, size)
-    images = [vectorize_image(img) for img in images]
+    images = [vectorize_image(img) for img in get_images(img_file, num, size)]
     labels = get_labels(label_file, num)
     output = convert_labels(labels, choices)
     images, output = shuffle(images, output)
