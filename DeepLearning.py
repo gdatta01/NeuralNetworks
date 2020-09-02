@@ -21,7 +21,7 @@ def inv_sigmoid(x):
     return math.log(x/(1-x))
 
 def relu(x):
-    return max(0, x)
+    return x if x > 0 else 0
 
 def deriv_sigmoid(x):
     y = sigmoid(x)
@@ -74,14 +74,6 @@ def grad_size(grad):
                     total += val ** 2
     return sqrt(total)
 
-def memo(f):
-    cache = {}
-    def memoized(l, j):
-        if (l, j) not in cache:
-            cache[(l, j)] = f(l, j)
-        return cache[(l, j)]
-    return memoized
-
 def shuffle(a, b):
     c = list(zip(a, b))
     random.shuffle(c)
@@ -121,18 +113,25 @@ class NeuralNet:
         self.step = step
         self.alpha = alpha
         self.lr_schedule = get_lrs(d, step, r)
+        self.cost_calc = np.vectorize(cost, otypes=[float])
+        
+        self.grad_weights = [np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))]
+        self.grad_biases = [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]
+        self.dc_da = [np.zeros(self.neurons[i].shape) for i in range(0, len(self.neurons))]
+
         
     def train(self, input_data, output_data, batch_size):
         """should take in entire dataset to train, feedforward,
            then optimize for each training example"""
-        """create sets of batch examples, feedforward and compute cost, then backprop"""
-        cost_calc = np.vectorize(cost)
+        #create sets of batch examples, feedforward and compute cost, then backprop
         m, n = 0, batch_size
         cost_over_time = []
         start_time = time.time()
         #dstep = 0.001665
         train_count = 0
+        
         #delta = np.array([[np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))], [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]])
+        
         while n <= len(input_data):
             batch_in = input_data[m:n]
             batch_out = output_data[m:n]
@@ -147,12 +146,14 @@ class NeuralNet:
                 train_count += 1
                 gradient = self.backprop(a, expected)
                 sum_grad += gradient
-                sum_cost += sum(cost_calc(a, expected))
+                sum_cost += sum(self.cost_calc(a, expected))
 
             avg_grad = sum_grad / count
             avg_cost = sum_cost / count
+            
             cost_over_time.append(avg_cost)
 
+            """momentum"""    
             #delta = -1 * self.lr_schedule(self.step, m) * avg_grad + self.alpha * delta
             
             self.weights -= self.alpha * avg_grad[0]
@@ -178,7 +179,7 @@ class NeuralNet:
     def test(self, input_data, output_data):
         a = self.feedforward(input_data)
         self.test_atts += 1
-        if np.argmax(a) == np.argmax(output_data):
+        if np.argmax(output_data) == selection(a):
             self.test_correct += 1
         
     def feedforward(self, input):
@@ -192,9 +193,7 @@ class NeuralNet:
         return self.neurons[-1]
 
     def backprop(self, a, y):
-        self.grad_weights = [np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))]
-        self.grad_biases = [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]
-        self.dc_da = [np.zeros(self.neurons[i].shape) for i in range(0, len(self.neurons))]
+
         for h in range(len(self.neurons[-1])):
             self.dc_da[-1][h] = deriv_cost(a[h], y[h])
         l = len(self.neurons) - 1
@@ -210,15 +209,12 @@ class NeuralNet:
         return np.array([self.grad_weights, self.grad_biases])
 
 
-def run_training(num=50000, batch=100, repeat = 1, img_file='train-images-idx3-ubyte.gz', label_file='train-labels-idx1-ubyte.gz', size=28, choices=10):
-    repeat -= 1
+def run_training(num=60000, batch=100, img_file='train-images-idx3-ubyte.gz', label_file='train-labels-idx1-ubyte.gz', size=28, choices=10):
     images = [vectorize_image(img) for img in get_images(img_file, num, size)]
     labels = get_labels(label_file, num)
     output = convert_labels(labels, choices)
     images, output = shuffle(images, output)
     nn.train(images, output, batch)
-    if repeat:
-        run_training(num, batch, repeat, img_file, label_file, size, choices)
 
 def run_testing():
     cur_correct = nn.test_correct
@@ -228,11 +224,13 @@ def run_testing():
         nn.test(img, actual)
     print(f'Accuracy: {((nn.test_correct - cur_correct) / (nn.test_atts - cur_atts) *100):.3f}%\n')
 
-nn = NeuralNet([784, 16, 16, 10], get_step_based)
-test_images = get_images("t10k-images-idx3-ubyte.gz", 1000, 28)
-image_iter = iter(test_images)
-test_labels = get_labels("t10k-labels-idx1-ubyte.gz", 1000)
-label_iter = iter(convert_labels(test_labels, 10))
+if __name__ == '__main__':
+    """for recognition of 28x28 images from MNIST Database, with 2 hidden layers of 16 neurons each"""
+    nn = NeuralNet([784, 16, 16, 10], get_step_based)
+    test_images = get_images("t10k-images-idx3-ubyte.gz", 10000, 28)
+    image_iter = iter(test_images)
+    test_labels = get_labels("t10k-labels-idx1-ubyte.gz", 10000)
+    label_iter = iter(convert_labels(test_labels, 10))
 
 def test_one():
     img = next(image_iter)
@@ -242,10 +240,17 @@ def test_one():
     image = vectorize_image(img)
     a = nn.feedforward(image)
     label = next(label_iter)
-    print(a)
-    print(np.argmax(a))
-    print(label)
-    print(sum(np.vectorize(cost)(a, label)))
+    print("Output Vector: \n", a)
+    print("Selection:", selection(a))
+    print("Actual:", np.argmax(label))
+    print("Error:", sum(nn.cost_calc(a, label)))
+
+
+def selection(a):
+    """Returns the selection with minimum error"""
+    I = np.identity(len(a))
+    costs = [sum(nn.cost_calc(a, I[:,[i]])) for i in range(len(a))]
+    return np.argmin(costs)
 
 
 
