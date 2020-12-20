@@ -14,7 +14,7 @@ def sigmoid_deriv(x):
     return y * (1 - y) 
 
 def ReLU(x):
-    return np.max(0, x)
+    return np.maximum(0, x)
 
 def ReLU_deriv(x):
     return np.where(x >= 0, 1, 0)
@@ -24,7 +24,7 @@ def softmax(x):
     return ex / np.apply_along_axis(np.sum, 0, ex)
 
 def logistic_loss(y, z):
-    return -y * np.log(z)
+    return -1 * y * np.log(z)
 
 def logistic_loss_deriv(y, z):
-    return -y / z 
+    return -1 * y / z 

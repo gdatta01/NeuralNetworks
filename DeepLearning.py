@@ -1,256 +1,120 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-import gzip
-import time
-import datetime
-import random
 from math import floor
 from math import sqrt
-
-def cost(a, y):
-    return (a - y)**2
-
-def deriv_cost(a, y):
-    return 2 * (a - y)
-
-def sigmoid(x):
-    return 1/(1 + np.exp(-x))
-
-def inv_sigmoid(x):
-    return math.log(x/(1-x))
-
-def relu(x):
-    return x if x > 0 else 0
-
-def deriv_sigmoid(x):
-    y = sigmoid(x)
-    return y * (1 - y)
-
-def deriv_relu(x):
-    return 0 if x < 0 else 1
-
-def get_images(file, num_images, image_size):
-    try:
-        f = gzip.open(file,'r')
-    except Error as e:
-        print("File not found")
-        exit()
-
-    f.read(16)
-    buf = f.read(image_size * image_size * num_images)
-    data = np.frombuffer(buf, dtype=np.uint8).astype(np.float32)
-    data = data.reshape(num_images, image_size, image_size, 1)
-    images = []
-    for i in range(num_images):
-        images.append(np.asarray(data[i]).squeeze())
-    return images
-
-def get_labels(file, num_images):
-    f = gzip.open(file,'r')
-    f.read(8)
-    labels = []
-    for i in range(0,num_images):
-        buf = f.read(1)
-        labels.append(np.frombuffer(buf, dtype=np.uint8).astype(np.int64))
-    return labels
-
-def convert_labels(labels, choices):
-    lst = []
-    for label in labels:
-        lst.append(np.zeros(choices).reshape(choices, 1))
-        lst[-1][label[0]] = 1
-    return lst
-
-def vectorize_image(img):
-    return np.reshape(img, (img.size, 1))
-
-def grad_size(grad):
-    total = 0
-    for side in grad:
-        for layer in side:
-            for row in layer:
-                for val in row:
-                    total += val ** 2
-    return sqrt(total)
-
-def shuffle(a, b):
-    c = list(zip(a, b))
-    random.shuffle(c)
-    a, b = zip(*c)
-    return a, b
-
-def get_time_based(d, lr0, r):
-    def time_based(lr, n):
-        return lr / (1 + d * n)
-    return time_based
-
-def get_step_based(d, lr0, r):
-    def step_based(lr, n):
-        return lr0 * d ** floor((1 + n) / r)
-    return step_based
-
-def get_exponential(d, lr0, r):
-    def exponential(lr, n):
-        return lr0 * exp(d * n)
-    return exponential
-
-class NeuralNet:
-    def __init__(self, layers, get_lrs = lambda d, s, r: lambda x, n: x, step = 0.1, alpha = 0.1, d = 0.5, r=10000, activation=sigmoid, da_dz=deriv_sigmoid):
-        self.training_correct = 0
-        self.training_atts = 0
-        self.test_correct = 0
-        self.test_atts = 0
-        self.neurons = []
-        self.z = []
-        for layer in layers:
-            self.neurons.append(np.zeros(layer).reshape((layer, 1)))
-            self.z.append(np.zeros(layer).reshape((layer, 1)))
-        self.activation = np.vectorize(activation)
-        self.activation_deriv = da_dz
-        self.weights = [0.5 * np.random.rand(layers[i], layers[i - 1]) - 0.25 for i in range(1, len(layers))]
-        self.biases = [0.5 * np.random.rand(layers[i], 1) - 0.25 for i in range(1, len(layers))]
-        self.step = step
-        self.alpha = alpha
-        self.lr_schedule = get_lrs(d, step, r)
-        self.cost_calc = np.vectorize(cost, otypes=[float])
-        
-        self.grad_weights = [np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))]
-        self.grad_biases = [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]
-        self.dc_da = [np.zeros(self.neurons[i].shape) for i in range(0, len(self.neurons))]
-
-        
-    def train(self, input_data, output_data, batch_size):
-        """should take in entire dataset to train, feedforward,
-           then optimize for each training example"""
-        #create sets of batch examples, feedforward and compute cost, then backprop
-        m, n = 0, batch_size
-        cost_over_time = []
-        start_time = time.time()
-        #dstep = 0.001665
-        train_count = 0
-        
-        #delta = np.array([[np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))], [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]])
-        
-        while n <= len(input_data):
-            batch_in = input_data[m:n]
-            batch_out = output_data[m:n]
-            count = 0
-            sum_grad = np.array([[np.zeros(self.weights[i].shape) for i in range(0, len(self.weights))], [np.zeros(self.biases[i].shape) for i in range(0, len(self.biases))]])
-            sum_cost = 0
-            round_time = time.time()
-            for input, expected in zip(batch_in, batch_out):
-                count += 1
-                a = self.feedforward(input)
-                self.training_atts += 1
-                train_count += 1
-                gradient = self.backprop(a, expected)
-                sum_grad += gradient
-                sum_cost += sum(self.cost_calc(a, expected))
-
-            avg_grad = sum_grad / count
-            avg_cost = sum_cost / count
-            
-            cost_over_time.append(avg_cost)
-
-            """momentum"""    
-            #delta = -1 * self.lr_schedule(self.step, m) * avg_grad + self.alpha * delta
-            
-            self.weights -= self.alpha * avg_grad[0]
-            self.biases -= self.alpha * avg_grad[1]
-            
-            m += batch_size
-            n += batch_size
-
-            print("Trained:", self.training_atts)
-            curr_time = time.time()
-            print("Elapsed:", datetime.timedelta(seconds = round(curr_time - start_time)))
-            rate = batch_size / (curr_time - round_time)
-            print(f'Rate: {rate:.3f} images per sec')
-            remaining = datetime.timedelta(seconds = round((len(input_data) - train_count) / rate))
-            print("Estimated Time remaining:", remaining)
-            print(f'Average Cost over last batch: {avg_cost[0]:.5f}\n')
-
-        #plt.plot([batch_size * i for i in range(1, n // batch_size)], cost_over_time)
-        #plt.ylabel("Cost")
-        #plt.xlabel("Training Examples")
-        #plt.show()
-
-    def test(self, input_data, output_data):
-        a = self.feedforward(input_data)
-        self.test_atts += 1
-        if np.argmax(output_data) == selection(a):
-            self.test_correct += 1
-        
-    def feedforward(self, input):
-        """computes output of network for given input"""
-        #assert type(input) is np.ndarray
-        #assert input.shape == self.neurons[0].shape
-        self.neurons[0] = input
-        for l in range(1, len(self.neurons)):
-            self.z[l] = np.dot(self.weights[l - 1], self.neurons[l - 1]) + self.biases[l - 1]
-            self.neurons[l] = self.activation(self.z[l])
-        return self.neurons[-1]
-
-    def backprop(self, a, y):
-
-        for h in range(len(self.neurons[-1])):
-            self.dc_da[-1][h] = deriv_cost(a[h], y[h])
-        l = len(self.neurons) - 1
-        while l > 0:
-            for i in range(len(self.weights[l - 1])):
-                z_prime = self.activation_deriv(self.z[l][i])
-                if l < len(self.neurons) - 1:
-                    self.dc_da[l][i] = sum([self.weights[l][h, i] * self.activation_deriv(self.z[l][h]) * self.dc_da[l + 1][h] for h in range(len(self.neurons[l + 1]))])
-                for j in range(len(self.weights[l - 1][i])):
-                    self.grad_weights[l - 1][i, j] = self.neurons[l - 1][j] * z_prime * self.dc_da[l][i]
-                self.grad_biases[l - 1][i] = z_prime * self.dc_da[l][i]
-            l -= 1
-        return np.array([self.grad_weights, self.grad_biases])
+from NeuralNet import *
+import argparse
+from math_functions import *
+from utils import *
 
 
-def run_training(num=60000, batch=100, img_file='train-images-idx3-ubyte.gz', label_file='train-labels-idx1-ubyte.gz', size=28, choices=10):
-    images = [vectorize_image(img) for img in get_images(img_file, num, size)]
-    labels = get_labels(label_file, num)
-    output = convert_labels(labels, choices)
-    images, output = shuffle(images, output)
-    nn.train(images, output, batch)
+# def grad_size(grad):
+#     total = 0
+#     for side in grad:
+#         for layer in side:
+#             for row in layer:
+#                 for val in row:
+#                     total += val ** 2
+#     return sqrt(total)
 
-def run_testing():
-    cur_correct = nn.test_correct
-    cur_atts = nn.test_atts
-    for img, actual in zip(iter(test_images), iter(test_labels)):
-        img = vectorize_image(img)
-        nn.test(img, actual)
-    print(f'Accuracy: {((nn.test_correct - cur_correct) / (nn.test_atts - cur_atts) *100):.3f}%\n')
+# def get_time_based(d, lr0, r):
+#     def time_based(lr, n):
+#         return lr / (1 + d * n)
+#     return time_based
+
+# def get_step_based(d, lr0, r):
+#     def step_based(lr, n):
+#         return lr0 * d ** floor((1 + n) / r)
+#     return step_based
+
+# def get_exponential(d, lr0, r):
+#     def exponential(lr, n):
+#         return lr0 * np.exp(d * n)
+#     return exponential
+
+
+
+def run_training(network, data, labels, batch, hold_out):
+    images = [vectorize_image(img) for img in data]
+    output = convert_labels(labels, network.layers[-1])
+    network.train(images, output, batch, hold_out)
+
+# def run_testing():
+#     cur_correct = nn.test_correct
+#     cur_atts = nn.test_atts
+#     for img, actual in zip(iter(test_images), iter(test_labels)):
+#         img = vectorize_image(img)
+#         nn.test(img, actual)
+#     print(f'Accuracy: {((nn.test_correct - cur_correct) / (nn.test_atts - cur_atts) *100):.3f}%\n')
+
+# def test_one():
+#     img = next(image_iter)
+#     picture = np.asarray(img).squeeze()
+#     plt.imshow(picture)
+#     plt.show()
+#     image = vectorize_image(img)
+#     a = nn.feedforward(image)
+#     label = next(label_iter)
+#     print("Output Vector: \n", a)
+#     print("Selection:", selection(a))
+#     print("Actual:", np.argmax(label))
+#     print("Error:", sum(nn.cost_calc(a, label)))
+
+
+# def selection(a):
+#     """Returns the selection with minimum error"""
+#     I = np.identity(len(a))
+#     costs = [sum(nn.cost_calc(a, I[:,[i]])) for i in range(len(a))]
+#     return np.argmin(costs)
+
+def main(args):
+    layers = args['layers']
+    activation = eval(args['g'])
+    use_softmax = args['softmax']
+    alpha = args['alpha']
+    loss = eval(args['loss'] + '_loss')
+    error = args['error_rate']
+    nn = NeuralNet(layers, alpha, activation, use_softmax, loss, error)
+
+    in_size = args['input_dim']
+    training_files = (args['train_data'], args['train_labels'])
+    testing_files = (args['test_data'], args['test_labels'])
+    num_training = args['num_train']
+    num_testing = args['num_test']
+    train_data = read_data(training_files[0], num_training, in_size[0], in_size[1])
+    train_labels = read_labels(training_files[1], num_training)
+    
+    test_data = read_data(testing_files[0], num_testing, in_size[0], in_size[1])
+    
+    validation = args['validation']
+    hold_out = int(num_training * validation)
+    
+    batch = args['batch']
+
+    run_training(nn, train_data, train_labels, batch, hold_out)
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Deep Learning')
+    parser.add_argument('--layers', nargs='*', type=int, default=[784, 16, 16, 10], help='Specify neurons in each layer of network')
+    parser.add_argument('--g', type=str, choices=['ReLU', 'sigmoid'],  default='ReLU', help='Specify activation function')
+    parser.add_argument('--softmax', action='store_true', help='Use softmax activation for output layer')
+    parser.add_argument('--loss', type=str, default='squared', choices=['squared', 'logistic'], help='Specify loss function')
+    parser.add_argument('--alpha', type=float, default=0.05, help='Specify learning rate')
+    parser.add_argument('--input-dim', nargs='+', default=[28,28], type=int, help='Specify dimensions of input data')
+    parser.add_argument('--train-data', type=str, default='train-images-idx3-ubyte.gz', help='File containing training data')
+    parser.add_argument('--train-labels', type=str, default='train-labels-idx1-ubyte.gz', help='File containing training labels')
+    parser.add_argument('--num-train', type=int, default=60000, help='Number of training examples')
+    parser.add_argument('--num-test', type=int, default=10000, help='Number of testing examples')
+    parser.add_argument('--test-data', type=str, default='t10k-images-idx3-ubyte.gz', help='File containing testing data')
+    parser.add_argument('--test-labels', type=str, default='t10k-labels-idx1-ubyte.gz', help='File containing testing data')
+    parser.add_argument('--batch', type=int, default=100, help='Specify batch size')
+    parser.add_argument('--validation', type=float, default=0.1, help='Fraction of training data to hold out')
+    parser.add_argument('--error-rate', type=float, default=0.1, help='Minimum error rate to stop training')
+    return parser
 
 if __name__ == '__main__':
-    """for recognition of 28x28 images from MNIST Database, with 2 hidden layers of 16 neurons each"""
-    nn = NeuralNet([784, 16, 16, 10], get_step_based)
-    test_images = get_images("t10k-images-idx3-ubyte.gz", 10000, 28)
-    image_iter = iter(test_images)
-    test_labels = get_labels("t10k-labels-idx1-ubyte.gz", 10000)
-    label_iter = iter(convert_labels(test_labels, 10))
-
-def test_one():
-    img = next(image_iter)
-    picture = np.asarray(img).squeeze()
-    plt.imshow(picture)
-    plt.show()
-    image = vectorize_image(img)
-    a = nn.feedforward(image)
-    label = next(label_iter)
-    print("Output Vector: \n", a)
-    print("Selection:", selection(a))
-    print("Actual:", np.argmax(label))
-    print("Error:", sum(nn.cost_calc(a, label)))
-
-
-def selection(a):
-    """Returns the selection with minimum error"""
-    I = np.identity(len(a))
-    costs = [sum(nn.cost_calc(a, I[:,[i]])) for i in range(len(a))]
-    return np.argmin(costs)
-
-
+    parser = create_parser()
+    args = parser.parse_args()
+    main(vars(args))
 
