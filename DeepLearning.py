@@ -36,8 +36,8 @@ from utils import *
 
 
 def run_training(network, data, labels, batch, hold_out):
-    images = [vectorize_image(img) for img in data]
-    output = convert_labels(labels, network.layers[-1])
+    images = list(vectorize_images(data))
+    output = list(convert_labels(labels, network.layers[-1]))
     network.train(images, output, batch, hold_out)
 
 # def run_testing():

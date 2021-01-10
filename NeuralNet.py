@@ -27,7 +27,7 @@ class NeuralNet:
         self.loss_deriv = eval(loss.__name__ + '_deriv')
         rng = np.random.default_rng()
         self.weights = [rng.random((layer_sizes[i], layer_sizes[i - 1])) - 0.5 for i in range(1, len(layer_sizes))]
-        self.biases = [rng.random((layer_sizes[i], 1)) for i in range(1, len(layer_sizes))]
+        self.biases = [rng.random((layer_sizes[i],)) for i in range(1, len(layer_sizes))]
         self.alpha = alpha
 
         self.error_rate = error
@@ -64,6 +64,8 @@ class NeuralNet:
             print(f'Accuracy over validation set: {validation_accuracy * 100:.5f}%\n')
             if 1 - validation_accuracy <= self.error_rate:
                 break
+            #print(self.weights[0])
+            #print(self.z[-1])
             # remaining = datetime.timedelta(seconds = round((len(input_data) - train_count) / rate))
             # print("Estimated Time remaining:", remaining)
             # print(f'Average Cost over last batch: {avg_cost[0]:.5f}\n')
@@ -91,9 +93,13 @@ class NeuralNet:
         last = len(self.z) - 1
         self.z[0] = x
         for l in range(1, last):
-            self.a[l] = self.weights[l - 1] @ self.z[l - 1] + self.biases[l - 1]
+            self.a[l] = self.weights[l - 1] @ self.z[l - 1]
+            for i in range(self.a[l].shape[0]):
+                self.a[l][i] += self.biases[l - 1][i]
             self.z[l] = self.hidden_activation(self.a[l])
-        self.a[last] = self.weights[last - 1] @ self.z[last - 1] + self.biases[last - 1]
+        self.a[last] = self.weights[last - 1] @ self.z[last - 1]
+        for i in range(self.a[last].shape[0]):
+            self.a[last][i] += self.biases[last - 1][i]
         self.z[last] = self.last_activation(self.a[last])
 
     def backprop_update(self, y, batch_size):
@@ -112,7 +118,7 @@ class NeuralNet:
         self.weights[l] += -1 / batch_size * self.alpha * grad_weights[l]
         dLoss_dz[l] = self.weights[l].T @ dLoss_da
         l -= 1
-        while l > 0:
+        while l >= 0:
             dLoss_da = dLoss_dz[l + 1] * self.hidden_activation_deriv(self.a[l + 1])
             grad_biases[l] = np.sum(dLoss_da, 1).reshape(self.biases[l].shape)
             self.biases[l] += -1 / batch_size * self.alpha * grad_biases[l]
