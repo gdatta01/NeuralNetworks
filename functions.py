@@ -1,7 +1,8 @@
 import numpy as np
 
+
 def squared_loss(z, y):
-    return 0.5 * np.square(y - z)
+    return 0.5 * np.pow(y - z, 2)
 
 def squared_loss_deriv(z, y):
     return y - z
@@ -28,3 +29,14 @@ def logistic_loss(y, z):
 
 def logistic_loss_deriv(y, z):
     return -1 * y / z 
+
+supported_activations = {
+    'relu': (ReLU, ReLU_deriv),
+    'sigmoid': (sigmoid, sigmoid_deriv),
+    'softmax': (softmax, sigmoid_deriv)
+}
+
+supported_loss = {
+    'logistic': (logistic_loss, logistic_loss_deriv), 
+    'squared': (squared_loss, squared_loss_deriv)
+}

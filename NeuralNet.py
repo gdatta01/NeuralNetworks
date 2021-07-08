@@ -1,37 +1,47 @@
 import numpy as np
-from math_functions import *
+from functions import supported_activations
 import time
 import datetime
 from utils import *
+from network_config import cfg
 
 class NeuralNet:
-    def __init__(self, layer_sizes, alpha, activation, use_softmax, loss, error):
-        self.training_atts = 0
-        self.test_correct = 0
-        self.test_atts = 0
+    def __init__(self, network_config):
+        cfg.merge_from_file(network_config)
         
-        self.layers = layer_sizes
-        self.a = [[] for i in layer_sizes]
-        self.z = [[] for i in layer_sizes]
+        self.depth = len(cfg.LAYERS) + 1
+        self.layer_sizes = [cfg.INPUTS]
+        self.activation_names = []
+        self.activations = []
+        self.activation_derivs = []
+        for size, act in cfg.LAYERS:
+            self.layer_sizes.append(size)
+            activation, activation_deriv = supported_activations[act.lower()]
+            self.activations.append(activation)
+            self.activation_names.append(act)
+            self.activation_derivs.append(activation_deriv)
 
-        self.hidden_activation = activation
-        self.hidden_activation_deriv = eval(activation.__name__ + '_deriv')
-        if use_softmax:
-            self.last_activation = softmax
-            self.last_activation_deriv = sigmoid_deriv
-        else:
-            self.last_activation = activation
-            self.last_activation_deriv = self.hidden_activation_deriv
+        self.x = [[] for _ in range(self.depth)]
+        self.z = [[] for _ in range(self.depth)]
 
-        self.loss_fn = loss
-        self.loss_deriv = eval(loss.__name__ + '_deriv')
-        rng = np.random.default_rng()
-        self.weights = [rng.random((layer_sizes[i], layer_sizes[i - 1])) - 0.5 for i in range(1, len(layer_sizes))]
-        self.biases = [rng.random((layer_sizes[i],)) for i in range(1, len(layer_sizes))]
-        self.alpha = alpha
+        rng = np.random.default_rng(seed=0)
+        self.weights = [rng.random((self.layer_sizes[i], self.layer_sizes[i - 1])) - 0.5 for i in range(1, len(self.layer_sizes))]
+        self.biases = [rng.random((self.layer_sizes[i],)) for i in range(1, len(self.layer_sizes))]
 
-        self.error_rate = error
-        
+    def __call__(self, x):
+        return self.forward(x)
+
+    def __str__(self):
+        arrow = "\n |\n\\ /\n\n"
+        s = f"INPUTS: {self.layer_sizes[0]}"
+        for i in range(1, self.depth):
+            s += (f"{arrow}LAYER {i}\n"
+            f"Units: {self.layer_sizes[i]}\n"
+            f"W: {self.weights[i - 1].shape}\n"
+            f"B: {self.biases[i - 1].shape}\n"
+            f"Activation: {self.activation_names[i - 1]}")
+        return s
+
     def train(self, input_data, output_data, batch_size, hold_out):
         train_num = len(input_data) - hold_out
         train_inputs = input_data[:train_num]
@@ -88,19 +98,33 @@ class NeuralNet:
                 correct += 1
         return correct / atts
 
-    def feedforward(self, x):
-        """computes output of network for given batch of inputs, x is (input-neurons x batch-size)"""
-        last = len(self.z) - 1
+
+    def forward(self, x):
+        """computes output of network for given batch of inputs, x is (B x L), where B is batch size and L is size of input layer"""
+        self.x[0] = x
         self.z[0] = x
-        for l in range(1, last):
-            self.a[l] = self.weights[l - 1] @ self.z[l - 1]
-            for i in range(self.a[l].shape[0]):
-                self.a[l][i] += self.biases[l - 1][i]
-            self.z[l] = self.hidden_activation(self.a[l])
-        self.a[last] = self.weights[last - 1] @ self.z[last - 1]
-        for i in range(self.a[last].shape[0]):
-            self.a[last][i] += self.biases[last - 1][i]
-        self.z[last] = self.last_activation(self.a[last])
+        for i in range(1, self.depth):
+            x = x @ self.weights[i - 1].T + self.biases[i - 1]
+            self.z[i] = x
+            x = self.activations[i - 1](x)
+            self.x[i] = x
+        return self.x[-1]
+
+
+    def backward(self, loss_deriv):
+        self.grad_weights = [0] * len(self.weights)
+        self.grad_biases = [0] * len(self.biases)
+        dLoss_dx = [0] * len(self.x)
+        L = self.depth - 1
+        dLoss_dx[L] = loss_deriv
+        while L > 0:
+            dx_dz = self.activation_derivs[L - 1](self.z[L])
+            dLoss_dz = dLoss_dx[L] * dx_dz
+            self.grad_biases[L - 1] = dLoss_dz
+            self.grad_weights[L - 1] = np.tensordot(dLoss_dz, self.x[L - 1].T, axes=[0, 1])
+            dLoss_dx[L - 1] = dLoss_dz @ self.weights[L - 1]
+            L -= 1
+        
 
     def backprop_update(self, y, batch_size):
         grad_weights = [0 for i in range(0, len(self.weights))]
