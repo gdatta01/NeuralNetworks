@@ -1,20 +1,19 @@
 import numpy as np
-from functions import supported_activations
+from activations import supported_activations
 import time
 import datetime
 from utils import *
-from network_config import cfg
+# from network_config import cfg
 
 class NeuralNet:
-    def __init__(self, network_config):
-        cfg.merge_from_file(network_config)
+    def __init__(self, layers, activations):
         
-        self.depth = len(cfg.LAYERS) + 1
-        self.layer_sizes = [cfg.INPUTS]
+        self.depth = len(layers)
+        self.layer_sizes = [layers[0]]
         self.activation_names = []
         self.activations = []
         self.activation_derivs = []
-        for size, act in cfg.LAYERS:
+        for size, act in zip(layers[1:], activations):
             self.layer_sizes.append(size)
             activation, activation_deriv = supported_activations[act.lower()]
             self.activations.append(activation)
@@ -116,12 +115,13 @@ class NeuralNet:
         self.grad_biases = [0] * len(self.biases)
         dLoss_dx = [0] * len(self.x)
         L = self.depth - 1
+        batch_size = loss_deriv.shape[0]
         dLoss_dx[L] = loss_deriv
         while L > 0:
             dx_dz = self.activation_derivs[L - 1](self.z[L])
             dLoss_dz = dLoss_dx[L] * dx_dz
-            self.grad_biases[L - 1] = dLoss_dz
-            self.grad_weights[L - 1] = np.tensordot(dLoss_dz, self.x[L - 1].T, axes=[0, 1])
+            self.grad_biases[L - 1] = 1 / batch_size * np.sum(dLoss_dz, axis=0)
+            self.grad_weights[L - 1] = 1 / batch_size * np.tensordot(dLoss_dz, self.x[L - 1].T, axes=[0, 1])
             dLoss_dx[L - 1] = dLoss_dz @ self.weights[L - 1]
             L -= 1
         
