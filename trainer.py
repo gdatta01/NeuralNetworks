@@ -6,10 +6,9 @@ logger = logging.getLogger(__name__)
 
 
 class Trainer:
-    def __init__(self, network, loss, dataset_factory, lr, lr_schedule=None, momentum=0):
+    def __init__(self, network, loss, dataset_factory, lr, lr_schedule=None, momentum=0, weight_decay=0):
         self.network = network
-        # self.loss, self.loss_deriv = supported_loss[loss]
-        self.optimizer = Optimizer(network, loss, lr, lr_schedule, momentum)
+        self.optimizer = Optimizer(network, loss, lr, lr_schedule, momentum, weight_decay)
         self.dataset_factory = dataset_factory
 
 
