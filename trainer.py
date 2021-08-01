@@ -33,5 +33,4 @@ class Trainer:
             d2 = datetime.now()
             self.epoch_losses.append(sum(self.batch_losses) / len(self.batch_losses))
             delta = str(d2 - d1)[:-5]
-            logger.info(f"{d2} Epoch {n} Duration {delta} Loss {self.epoch_losses[-1]}")
-
+            logger.info(f"{d2} Epoch {n} Duration {delta} Loss {self.epoch_losses[-1]:.2f}")

@@ -19,7 +19,7 @@ def train(network):
     train_labels_path = os.path.join(cfg.DATASET.LOCATION, cfg.DATASET.TRAIN.LABELS)
 
     data = read_data(train_data_path, cfg.DATASET.TRAIN.SIZE, network.inputs)
-    labels = convert_labels(read_labels(train_labels_path, cfg.DATASET.TRAIN.SIZE), network.outputs, cfg.TRAINING.INCORRECT_FRAC)
+    labels = convert_labels(read_labels(train_labels_path, cfg.DATASET.TRAIN.SIZE), network.outputs, cfg.TRAINING.TARGET_SMOOTHING)
 
     loader = Dataloader(data, labels, cfg.TRAINING.BATCH_SIZE)
 

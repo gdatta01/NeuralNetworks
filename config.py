@@ -27,7 +27,7 @@ def datset_config():
 
 def training_config():
     cfg = CfgNode()
-    cfg.INCORRECT_FRAC = 0.0
+    cfg.TARGET_SMOOTHING = 0.0
     cfg.LOSS = ""
     cfg.EPOCHS = 0
     cfg.BATCH_SIZE = 0
