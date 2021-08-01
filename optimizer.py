@@ -17,8 +17,8 @@ class Optimizer:
         self.weight_gradients = [np.zeros(w.shape) for w in self.nn.weights]
         self.bias_gradients = [np.zeros(b.shape) for b in self.nn.biases]
 
+
     def backward(self, y):
-        # print(y[0][0], self.nn.x[-1][0][0], end=' ')
         dLoss_dy_hat = self.loss_deriv(y, self.nn.x[-1])
         self.dweights = [0 for _ in self.nn.weights]
         self.dbiases = [0 for _ in self.nn.biases]
@@ -34,13 +34,13 @@ class Optimizer:
                                    self.wd * self.nn.weights[L - 1]
             dLoss_dx[L - 1] = dLoss_dz @ self.nn.weights[L - 1]
             L -= 1
-        # print(dLoss_dy_hat.max(), dLoss_dz.max(), dLoss_dx[0].max(), end = ' ')
+
 
     def update_lr(self, n):
         self.lr = self.lr_schedule(self.lr, n)
 
+
     def step(self):
-        # print(self.nn.weights[0].max(), end=' ')
         for i in range(len(self.nn.weights)):
             self.weight_gradients[i] = self.dweights[i] * (1 - self.momentum) \
                                        + self.momentum * self.weight_gradients[i]
@@ -48,4 +48,3 @@ class Optimizer:
             self.bias_gradients[i] = self.dbiases[i] * (1 - self.momentum) \
                                      + self.momentum * self.bias_gradients[i]
             self.nn.biases[i] += -1 * self.lr * self.bias_gradients[i]
-        # print(self.dweights[0].max(), self.weight_gradients[0].max(), self.nn.weights[0].max())

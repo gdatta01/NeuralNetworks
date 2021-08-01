@@ -1,0 +1,4 @@
+INPUTS: 1
+LAYERS:
+  - [200, ReLU]
+  - [1, identity]

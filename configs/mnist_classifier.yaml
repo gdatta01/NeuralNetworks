@@ -1,0 +1,23 @@
+NETWORK:
+  INPUTS: 784
+  HIDDEN_LAYERS:
+    - [ 64, 'ReLU' ]
+    - [ 32, 'ReLU' ]
+  OUTPUTS: 10
+DATASET:
+  LOCATION: ./data/mnist
+  TRAIN:
+    DATA: train-images-idx3-ubyte.gz
+    LABELS: train-labels-idx1-ubyte.gz
+    SIZE: 60000
+  TEST:
+    DATA: t10k-images-idx3-ubyte.gz
+    LABELS: t10k-labels-idx1-ubyte.gz
+    SIZE: 10000
+TRAINING:
+  LOSS: crossentropy
+  EPOCHS: 40
+  BATCH_SIZE: 100
+  LR: 0.01
+  MOMENTUM: 0.9
+  WEIGHT_DECAY: 0.1

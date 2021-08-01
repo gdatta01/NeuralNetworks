@@ -32,11 +32,11 @@ def softmax(x):
     return ex / np.sum(ex, axis=1).reshape((-1, 1))
 
 
-def identity(x):
+def linear(x):
     return x
 
 
-def identity_deriv(x):
+def linear_deriv(x):
     return 1
 
 
@@ -45,14 +45,15 @@ class ActivationKeys:
     SIGMOID = 'sigmoid'
     SOFTMAX = 'softmax'
     HARDTANH = 'hardtanh'
-    IDENTITY = 'identity'
+    LINEAR = 'linear'
+
 
 _supported_activations = {
     ActivationKeys.RELU: (ReLU, ReLU_deriv),
     ActivationKeys.SIGMOID: (sigmoid, sigmoid_deriv),
     ActivationKeys.SOFTMAX: (softmax, sigmoid_deriv),
     ActivationKeys.HARDTANH: (hardtanh, hartanh_deriv),
-    ActivationKeys.IDENTITY: (identity, identity_deriv)
+    ActivationKeys.LINEAR: (linear, linear_deriv)
 }
 
 
