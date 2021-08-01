@@ -1,4 +1,3 @@
-import random
 import gzip
 import numpy as np
 import os

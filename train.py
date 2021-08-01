@@ -51,3 +51,4 @@ if __name__ == '__main__':
     nn = NeuralNet(net_cfg.INPUTS, net_cfg.HIDDEN_LAYERS, net_cfg.OUTPUTS)
 
     train(nn)
+    test(nn)
