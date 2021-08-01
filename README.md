@@ -15,8 +15,22 @@ While some API design is inspired by PyTorch, the implementations are my own.
 
 ### Usage
 `python3 train.py --cfg configs/mnist_classifier.yaml`  
-Trains a classifier on the MNIST handwritten digits dataset. Reaches 96.5% accuracy on the test set in 20 epochs.
+Trains a classifier on the MNIST handwritten digits dataset.  
+#### Results
+
+| Epochs Trained  | Test Set Accuracy (%) |
+|---   |---|
+| 1 | 87.10 |
+| 5 | 93.50 |
+| 10 | 95.27 |
+| 20 | 96.51 |
+| 50 | 97.22 |
+| 100 | 97.32 |
+
+
+### Todo
+- Learning rate scheduling
 
 
 ### Dependencies
-The only dependencies are NumPy and YACS.
+NumPy, YACS.
