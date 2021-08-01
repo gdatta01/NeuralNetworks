@@ -16,8 +16,15 @@ class MNIST:
     INPUTS = 784
 
 
+class SINE:
+    TRAIN_FILE = 'train.npz'
+    TRAIN_SIZE = 100000
+    TEST_FILE = 'test.npz'
+    TEST_SIZE = 1000
+
+
 def get_dataloader(name, path, holdout_frac, batch_size, smoothing=0.0, test=False, normalize=True):
-    datasets = {'mnist': get_mnist}
+    datasets = {'mnist': get_mnist, 'sin': get_sin}
     data, labels = shuffle(*datasets[name](path, test, smoothing))
     length = len(data)
     if holdout_frac:
@@ -27,6 +34,18 @@ def get_dataloader(name, path, holdout_frac, batch_size, smoothing=0.0, test=Fal
         return Dataloader(data, labels, batch_size, normalize), Dataloader(val_data, val_labels, batch_size, normalize)
     else:
         return Dataloader(data, labels, batch_size, normalize)
+
+
+def get_sin(folder, test, smoothing):
+    if test:
+        d = np.load(os.path.join(folder, SINE.TEST_FILE))
+    else:
+        d = np.load(os.path.join(folder, SINE.TRAIN_FILE))
+    x, y = d['x'], d['y']
+    d.close()
+    return x, y
+
+
 
 
 def get_mnist(folder, test, smoothing):

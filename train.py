@@ -16,7 +16,8 @@ logger = logging.getLogger(__file__)
 
 def train(network):
     train_loader, val_loader = get_dataloader(cfg.DATASET.NAME, cfg.DATASET.PATH, cfg.TRAINING.HOLDOUT,
-                                              cfg.TRAINING.BATCH_SIZE, cfg.TRAINING.TARGET_SMOOTHING)
+                                              cfg.TRAINING.BATCH_SIZE, smoothing=cfg.TRAINING.TARGET_SMOOTHING,
+                                              normalize=cfg.DATASET.NORMALIZE)
     optimizer = Optimizer(network, cfg.TRAINING.LOSS, cfg.TRAINING.LR, cfg.TRAINING.LR_SCHEDULE, cfg.TRAINING.MOMENTUM,
                           cfg.TRAINING.WEIGHT_DECAY)
     train_interface = Trainer(network, optimizer, train_loader, val_loader)
@@ -26,7 +27,8 @@ def train(network):
 
 def test(network):
     test_loader = get_dataloader(cfg.DATASET.NAME, cfg.DATASET.PATH, 0,
-                                 cfg.TRAINING.BATCH_SIZE, cfg.TRAINING.TARGET_SMOOTHING, test=True)
+                                 cfg.TRAINING.BATCH_SIZE, smoothing=cfg.TRAINING.TARGET_SMOOTHING,
+                                 normalize=cfg.DATASET.NORMALIZE, test=True)
 
     interface = Trainer(network, None, None, test_loader)
     interface.validate()

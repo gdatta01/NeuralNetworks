@@ -1,4 +1,16 @@
-INPUTS: 1
-LAYERS:
-  - [200, ReLU]
-  - [1, identity]
+NETWORK:
+  INPUTS: 1
+  HIDDEN_LAYERS:
+    - [ 200, 'ReLU' ]
+  OUTPUTS: 1
+DATASET:
+  NAME: sin
+  PATH: ./data/sin
+TRAINING:
+  LOSS: squared
+  EPOCHS: 40
+  BATCH_SIZE: 100
+  LR: 0.01
+  MOMENTUM: 0.9
+  WEIGHT_DECAY: 0.0
+  HOLDOUT: 0.1

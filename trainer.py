@@ -42,7 +42,7 @@ class Trainer:
             self.epoch_losses.append(sum(self.batch_losses) / len(self.batch_losses))
             self.validate()
             delta = str(d2 - d1)[:-5]
-            logger.info(f"{d2} Epoch {n} Duration {delta} Training Loss {self.epoch_losses[-1]:.3f} Val Acc "
+            logger.info(f"{d2} Epoch {n} Duration {delta} Train Loss {self.epoch_losses[-1]:.3f} Val Acc "
                         f"{self.val_accuracy[-1]:.2f}")
 
 

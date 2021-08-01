@@ -13,6 +13,7 @@ def datset_config():
     cfg = CfgNode()
     cfg.NAME = ""
     cfg.PATH = ""
+    cfg.NORMALIZE = False
     return cfg
 
 
