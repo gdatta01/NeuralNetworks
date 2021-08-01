@@ -45,6 +45,7 @@ class Trainer:
 
 
     def validate(self):
+        self.val_accuracy.append(0.0)
         for batch in self.val_loader:
             x, y = batch
             output = self.network(x)

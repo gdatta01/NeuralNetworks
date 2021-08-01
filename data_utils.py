@@ -31,9 +31,9 @@ def get_dataloader(name, path, holdout_frac, batch_size, smoothing=0.0, test=Fal
         holdout_index = int(length * (1 - holdout_frac))
         data, val_data = data[:holdout_index], data[holdout_index:]
         labels, val_labels = labels[:holdout_index], labels[holdout_index:]
-        return Dataloader(data, labels, batch_size, normalize), Dataloader(val_data, val_labels, batch_size, normalize)
+        return Dataloader(data, labels, batch_size or len(data), normalize), Dataloader(val_data, val_labels, len(val_data), normalize)
     else:
-        return Dataloader(data, labels, batch_size, normalize)
+        return Dataloader(data, labels, batch_size or len(data), normalize)
 
 
 def get_sin(folder, test, smoothing):

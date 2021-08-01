@@ -10,11 +10,12 @@ class Dataloader:
         self.data = data
         self.labels = np.array(labels)
         self.batch_size = batch_size
+        self.size = len(self.data)
 
 
     def dataset(self):
         index = 0
-        while index < len(self.data):
+        while index < self.size:
             xs = self.data[index:index + self.batch_size]
             ys = self.labels[index:index + self.batch_size]
             index += self.batch_size

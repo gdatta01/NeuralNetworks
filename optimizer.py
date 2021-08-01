@@ -19,13 +19,12 @@ class Optimizer:
 
 
     def backward(self, y):
-        dLoss_dy_hat = self.loss_deriv(y, self.nn.x[-1])
         self.dweights = [0 for _ in self.nn.weights]
         self.dbiases = [0 for _ in self.nn.biases]
         dLoss_dx = [0] * len(self.nn.x)
         L = self.nn.depth - 1
-        batch_size = dLoss_dy_hat.shape[0]
-        dLoss_dx[L] = dLoss_dy_hat
+        batch_size = y.shape[0]
+        dLoss_dx[L] = self.loss_deriv(y, self.nn.x[-1])
         while L > 0:
             dx_dz = get_activation_deriv(self.nn.activation_names[L - 1])(self.nn.z[L])
             dLoss_dz = dLoss_dx[L] * dx_dz
@@ -36,10 +35,6 @@ class Optimizer:
             L -= 1
 
 
-    def update_lr(self, n):
-        self.lr = self.lr_schedule(self.lr, n)
-
-
     def step(self):
         for i in range(len(self.nn.weights)):
             self.weight_gradients[i] = self.dweights[i] * (1 - self.momentum) \
@@ -48,3 +43,7 @@ class Optimizer:
             self.bias_gradients[i] = self.dbiases[i] * (1 - self.momentum) \
                                      + self.momentum * self.bias_gradients[i]
             self.nn.biases[i] += -1 * self.lr * self.bias_gradients[i]
+
+
+    def update_lr(self, n):
+        self.lr = self.lr_schedule(self.lr, n)

@@ -6,6 +6,9 @@ from config import cfg
 from data_utils import get_dataloader
 import argparse
 import sys
+import matplotlib.pyplot as plt
+import numpy as np
+from functions.activations import softmax
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(asctime)s [%(module)s.%(funcName)s] %(message)s",
                               datefmt="%Y-%m-%d %I:%M:%S%p", stream=sys.stdout)
@@ -28,12 +31,12 @@ def train(network):
 
 def test(network):
     test_loader = get_dataloader(cfg.DATASET.NAME, cfg.DATASET.PATH, 0,
-                                 cfg.TRAINING.BATCH_SIZE, smoothing=cfg.TRAINING.TARGET_SMOOTHING,
+                                 None, smoothing=cfg.TRAINING.TARGET_SMOOTHING,
                                  normalize=cfg.DATASET.NORMALIZE, test=True)
 
     interface = Trainer(network, None, None, test_loader)
     interface.validate()
-    accuracy = sum(interface.val_accuracy) / len(interface.val_accuracy)
+    accuracy = interface.val_accuracy[-1]
     logger.info(f'TEST Accuracy: {accuracy:.4f}')
 
 
