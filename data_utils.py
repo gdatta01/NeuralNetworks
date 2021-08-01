@@ -2,6 +2,7 @@ import gzip
 import numpy as np
 import os
 from dataloader import Dataloader
+import traceback
 
 
 class MNIST:
@@ -91,8 +92,8 @@ def convert_labels(labels, choices, smoothing=0):
 rng = np.random.default_rng(seed=0)
 
 
-def shuffle(*lists):
-    c = list(zip(*lists))
+def shuffle(a, b):
+    c = np.array(list(zip(a, b)), dtype=object)
     rng.shuffle(c)
     a, b = zip(*c)
     return a, b
