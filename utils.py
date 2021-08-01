@@ -3,12 +3,12 @@ import gzip
 import numpy as np
 
 
-def read_data(file, num, w, h):
+def read_data(file, num, l):
     with gzip.open(file, 'r') as f:
         f.read(16)
-        buf = f.read(w * h * num)
+        buf = f.read(l * num)
     data = np.frombuffer(buf, dtype=np.uint8).astype(np.float32)
-    data = data.reshape(num, w, h)
+    data = data.reshape(num, l)
     return data
 
 
@@ -17,15 +17,20 @@ def read_labels(file, num):
         f = gzip.open(file,'r')
         f.read(8)
         buf = f.read(num)
-    labels = np.frombuffer(buf, dype=np.uint8)
+    labels = np.frombuffer(buf, dtype=np.uint8)
     return labels
 
 
-def convert_labels(labels, choices):
-    for label in labels:
-        r = (np.full((choices, 1), 0.02, np.float64))
-        r[label[0]] = 1 - 0.02 * choices
-        yield r
+
+def convert_labels(labels, choices, incorrect_frac=0):
+    if incorrect_frac==0:
+        converted = np.zeros((len(labels), choices))
+        converted[np.arange(len(converted)), labels] = 1
+    else:
+        converted = np.full((len(labels), choices), incorrect_frac/choices)
+        converted[np.arange(len(converted)), labels] = 1 - incorrect_frac
+    return converted
+
 
 
 def shuffle(a, b):
