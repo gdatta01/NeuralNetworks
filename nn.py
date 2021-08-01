@@ -1,9 +1,6 @@
 import numpy as np
 from functions import activations
 
-
-# from network_config import cfg
-
 class NeuralNet:
     def __init__(self, inputs, hidden_layers, outputs):
 

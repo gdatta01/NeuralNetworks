@@ -1,45 +1,37 @@
 from nn import NeuralNet
 from trainer import Trainer
-from dataloader import Dataloader
+from optimizer import Optimizer
 from config import cfg
-from utils import read_data, read_labels, convert_labels
-import os
+from data_utils import get_dataloader
 import argparse
 import logging
-import numpy as np
 import sys
 
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s [%(module)s] %(asctime)s: %(message)s", datefmt="%Y-%m-%d %I:%M:%S%p", stream=sys.stdout)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s [%(module)s] %(asctime)s: %(message)s",
+                    datefmt="%Y-%m-%d %I:%M:%S%p", stream=sys.stdout)
 
 logger = logging.getLogger(__file__)
 
+
 def train(network):
-    train_data_path = os.path.join(cfg.DATASET.LOCATION, cfg.DATASET.TRAIN.DATA)
-    train_labels_path = os.path.join(cfg.DATASET.LOCATION, cfg.DATASET.TRAIN.LABELS)
-
-    data = read_data(train_data_path, cfg.DATASET.TRAIN.SIZE, network.inputs)
-    labels = convert_labels(read_labels(train_labels_path, cfg.DATASET.TRAIN.SIZE), network.outputs, cfg.TRAINING.TARGET_SMOOTHING)
-
-    loader = Dataloader(data, labels, cfg.TRAINING.BATCH_SIZE)
-
-    train_interface = Trainer(network, cfg.TRAINING.LOSS, loader, cfg.TRAINING.LR, cfg.TRAINING.LR_SCHEDULE, cfg.TRAINING.MOMENTUM)
+    train_loader, val_loader = get_dataloader(cfg.DATASET.NAME, cfg.DATASET.PATH, cfg.TRAINING.HOLDOUT,
+                                              cfg.TRAINING.BATCH_SIZE, cfg.TRAINING.TARGET_SMOOTHING)
+    optimizer = Optimizer(network, cfg.TRAINING.LOSS, cfg.TRAINING.LR, cfg.TRAINING.LR_SCHEDULE, cfg.TRAINING.MOMENTUM,
+                          cfg.TRAINING.WEIGHT_DECAY)
+    train_interface = Trainer(network, optimizer, train_loader, val_loader)
 
     train_interface.train(cfg.TRAINING.EPOCHS)
 
 
 def test(network):
-    test_data_path = os.path.join(cfg.DATASET.LOCATION, cfg.DATASET.TEST.DATA)
-    test_labels_path = os.path.join(cfg.DATASET.LOCATION, cfg.DATASET.TEST.LABELS)
+    test_loader = get_dataloader(cfg.DATASET.NAME, cfg.DATASET.PATH, 0,
+                                 cfg.TRAINING.BATCH_SIZE, cfg.TRAINING.TARGET_SMOOTHING, test=True)
 
-    test_data = read_data(test_data_path, cfg.DATASET.TEST.SIZE, network.inputs)
-    test_labels = read_labels(test_labels_path, cfg.DATASET.TEST.SIZE)
-    test_loader = Dataloader(test_data, test_labels, cfg.DATASET.TEST.SIZE)
-
-    outputs = network(next(test_loader())[0])
-    accuracy = np.count_nonzero(np.argmax(outputs, axis=1) == test_labels) / cfg.DATASET.TEST.SIZE
-    logger.info(f'TEST Accuracy: {accuracy}')
-    
+    interface = Trainer(network, None, None, test_loader)
+    interface.validate()
+    accuracy = sum(interface.val_accuracy) / len(interface.val_accuracy)
+    logger.info(f'TEST Accuracy: {accuracy:.3f}')
 
 
 def get_args():

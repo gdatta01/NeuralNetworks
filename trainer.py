@@ -1,23 +1,31 @@
-from optimizer import Optimizer
 import logging
 from datetime import datetime
+from functions.loss import squared_loss
+from functions.activations import softmax
+import numpy as np
+
 
 logger = logging.getLogger(__name__)
 
 
 class Trainer:
-    def __init__(self, network, loss, dataset_factory, lr, lr_schedule=None, momentum=0, weight_decay=0):
+    def __init__(self, network, optimizer, train_loader, val_loader):
         self.network = network
-        self.optimizer = Optimizer(network, loss, lr, lr_schedule, momentum, weight_decay)
-        self.dataset_factory = dataset_factory
+        self.optimizer = optimizer
+        self.train_loader = train_loader
+        self.val_loader = val_loader
         self.batch_losses = []
         self.epoch_losses = []
+        self.val_accuracy = []
+        if self.network.outputs == 1:
+            self.calc_accuracy = self.regression_accuracy
+        else:
+            self.calc_accuracy = self.classification_accuracy
 
 
     def train_epoch(self):
         self.batch_losses = []
-        dataset = self.dataset_factory()
-        for batch in dataset:
+        for batch in self.train_loader:
             x, y = batch
             output = self.network(x)
             self.optimizer.backward(y)
@@ -32,5 +40,30 @@ class Trainer:
             self.train_epoch()
             d2 = datetime.now()
             self.epoch_losses.append(sum(self.batch_losses) / len(self.batch_losses))
+            self.validate()
             delta = str(d2 - d1)[:-5]
-            logger.info(f"{d2} Epoch {n} Duration {delta} Loss {self.epoch_losses[-1]:.2f}")
+            logger.info(f"{d2} Epoch {n} Duration {delta} Training Loss {self.epoch_losses[-1]:.3f} Val Acc "
+                        f"{self.val_accuracy[-1]:.2f}")
+
+
+    def validate(self):
+        for batch in self.val_loader:
+            x, y = batch
+            output = self.network(x)
+            acc = self.calc_accuracy(y, output)
+            self.val_accuracy.append(acc)
+
+
+    @staticmethod
+    def classification_accuracy(y, x):
+        y_hat = softmax(x)
+        return np.count_nonzero(np.argmax(y_hat, axis=1) == np.argmax(y, axis=1)) / y.shape[0]
+
+
+    @staticmethod
+    def regression_accuracy(y, y_hat):
+        return squared_loss(y, y_hat)
+
+
+
+

@@ -9,19 +9,10 @@ def network_config():
     return cfg
 
 
-def data_config():
-    cfg = CfgNode()
-    cfg.DATA = ""
-    cfg.LABELS = ""
-    cfg.SIZE = 0
-    return cfg
-
-
 def datset_config():
     cfg = CfgNode()
-    cfg.LOCATION = ""
-    cfg.TRAIN = data_config()
-    cfg.TEST = data_config()
+    cfg.NAME = ""
+    cfg.PATH = ""
     return cfg
 
 
@@ -35,6 +26,7 @@ def training_config():
     cfg.LR_SCHEDULE = ""
     cfg.MOMENTUM = 0.0
     cfg.WEIGHT_DECAY = 0.0
+    cfg.HOLDOUT = 0.0
     return cfg
 
 
