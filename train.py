@@ -1,23 +1,24 @@
+import logging
 from nn import NeuralNet
-from trainer import Trainer
 from optimizer import Optimizer
+from trainer import Trainer
 from config import cfg
 from data_utils import get_dataloader
 import argparse
-import logging
 import sys
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(asctime)s [%(module)s.%(funcName)s] %(message)s",
+                              datefmt="%Y-%m-%d %I:%M:%S%p", stream=sys.stdout)
+logger = logging.getLogger(__name__)
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s [%(module)s] %(asctime)s: %(message)s",
-                    datefmt="%Y-%m-%d %I:%M:%S%p", stream=sys.stdout)
-
-logger = logging.getLogger(__file__)
 
 
 def train(network):
+    logger.info('Loading dataset...')
     train_loader, val_loader = get_dataloader(cfg.DATASET.NAME, cfg.DATASET.PATH, cfg.TRAINING.HOLDOUT,
                                               cfg.TRAINING.BATCH_SIZE, smoothing=cfg.TRAINING.TARGET_SMOOTHING,
                                               normalize=cfg.DATASET.NORMALIZE)
+    logger.info('Creating optimizer...')
     optimizer = Optimizer(network, cfg.TRAINING.LOSS, cfg.TRAINING.LR, cfg.TRAINING.LR_SCHEDULE, cfg.TRAINING.MOMENTUM,
                           cfg.TRAINING.WEIGHT_DECAY)
     train_interface = Trainer(network, optimizer, train_loader, val_loader)
@@ -33,7 +34,7 @@ def test(network):
     interface = Trainer(network, None, None, test_loader)
     interface.validate()
     accuracy = sum(interface.val_accuracy) / len(interface.val_accuracy)
-    logger.info(f'TEST Accuracy: {accuracy:.3f}')
+    logger.info(f'TEST Accuracy: {accuracy:.4f}')
 
 
 def get_args():

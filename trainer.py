@@ -5,9 +5,6 @@ from functions.activations import softmax
 import numpy as np
 
 
-logger = logging.getLogger(__name__)
-
-
 class Trainer:
     def __init__(self, network, optimizer, train_loader, val_loader):
         self.network = network
@@ -21,6 +18,7 @@ class Trainer:
             self.calc_accuracy = self.regression_accuracy
         else:
             self.calc_accuracy = self.classification_accuracy
+        self.logger = logging.getLogger(__name__)
 
 
     def train_epoch(self):
@@ -42,8 +40,8 @@ class Trainer:
             self.epoch_losses.append(sum(self.batch_losses) / len(self.batch_losses))
             self.validate()
             delta = str(d2 - d1)[:-5]
-            logger.info(f"{d2} Epoch {n} Duration {delta} Train Loss {self.epoch_losses[-1]:.3f} Val Acc "
-                        f"{self.val_accuracy[-1]:.2f}")
+            self.logger.info(f"Epoch {n} Duration {delta} Train Loss {self.epoch_losses[-1]:.4f} Val "
+                        f"{self.val_accuracy[-1]:.4f}")
 
 
     def validate(self):
