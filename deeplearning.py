@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def train(network):
     logger.info('Loading dataset...')
     train_loader, val_loader = get_dataloader(cfg.DATASET.NAME, cfg.DATASET.PATH, cfg.TRAINING.HOLDOUT,
-                                              cfg.TRAINING.BATCH_SIZE, smoothing=cfg.TRAINING.TARGET_SMOOTHING,
+                                              cfg.TRAINING.BATCH_SIZE, smoothing=cfg.DATASET.TARGET_SMOOTHING,
                                               normalize=cfg.DATASET.NORMALIZE)
     logger.info('Creating optimizer...')
     optimizer = Optimizer(network, cfg.TRAINING.LOSS, cfg.TRAINING.LR, cfg.TRAINING.LR_SCHEDULE, cfg.TRAINING.MOMENTUM,
@@ -31,7 +31,7 @@ def train(network):
 
 def test(network):
     test_loader = get_dataloader(cfg.DATASET.NAME, cfg.DATASET.PATH, 0,
-                                 None, smoothing=cfg.TRAINING.TARGET_SMOOTHING,
+                                 None, smoothing=cfg.DATASET.TARGET_SMOOTHING,
                                  normalize=cfg.DATASET.NORMALIZE, test=True)
 
     interface = Trainer(network, None, None, test_loader)
