@@ -17,7 +17,7 @@ While some API design is inspired by PyTorch, the implementations are my own.
 `python3 deeplearning.py --cfg configs/mnist_classifier.yaml`  
 Trains a classifier on the MNIST handwritten digits dataset.  
 #### Results
-Best accuracy for 2 hidden-layer network in 40 epochs: 97.65%  
+Best test set accuracy for 2 hidden-layer network in 40 epochs: 97.65%  
 128, 64 neurons with ReLU activations, LR 0.01, Momentum 0.2
 
 <!-- | Epochs Trained  | Test Set Accuracy (%) |
