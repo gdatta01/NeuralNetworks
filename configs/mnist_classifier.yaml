@@ -1,8 +1,8 @@
 NETWORK:
   INPUTS: 784
   HIDDEN_LAYERS:
+    - [ 128, 'ReLU' ]
     - [ 64, 'ReLU' ]
-    - [ 32, 'ReLU' ]
   OUTPUTS: 10
 DATASET:
   NAME: mnist
@@ -10,9 +10,9 @@ DATASET:
   NORMALIZE: True
 TRAINING:
   LOSS: crossentropy
-  EPOCHS: 20
+  EPOCHS: 40
   BATCH_SIZE: 100
   LR: 0.01
-  MOMENTUM: 0.9
+  MOMENTUM: 0.2
   WEIGHT_DECAY: 0.0
   HOLDOUT: 0.1
