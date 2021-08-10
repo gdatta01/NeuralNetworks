@@ -25,7 +25,8 @@ class SINE:
 
 def get_dataloader(name, path, holdout_frac, batch_size, smoothing=0.0, test=False, normalize=True):
     datasets = {'mnist': get_mnist, 'sin': get_sin}
-    data, labels = shuffle(*datasets[name](path, test, smoothing))
+    data, labels = datasets[name](path, test, smoothing)
+    data, labels = shuffle(data, labels)
     length = len(data)
     if holdout_frac:
         holdout_index = int(length * (1 - holdout_frac))
@@ -93,7 +94,8 @@ rng = np.random.default_rng(seed=0)
 
 
 def shuffle(a, b):
-    c = np.array(list(zip(a, b)), dtype=object)
+    c = np.c_[a.reshape(len(a), -1), b.reshape(len(b), -1)]
     rng.shuffle(c)
-    a, b = zip(*c)
-    return a, b
+    a2 = c[:, :a.size // len(a)].reshape(a.shape)
+    b2 = c[:, a.size // len(a):].reshape(b.shape)
+    return a2, b2
