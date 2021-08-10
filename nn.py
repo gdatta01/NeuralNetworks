@@ -61,7 +61,7 @@ class NeuralNet:
         self.x[0] = x
         self.z[0] = x
         for i in range(1, self.depth):
-            x = np.matmul(x, self.weights[i - 1].T + self.biases[i - 1])
+            x = np.matmul(x, self.weights[i - 1].T) + self.biases[i - 1]
             self.z[i] = x
             x = self.activations[i - 1](x)
             self.x[i] = x
